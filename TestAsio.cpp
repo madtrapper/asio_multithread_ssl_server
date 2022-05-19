@@ -121,14 +121,12 @@ public:
 	//acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));
 	try {
 	  acceptor_.bind(endpoint);
-	  printf("1.5-----\n");
-
 	  acceptor_.listen();
 	}
 	catch (std::exception& e) {
 	  std::cerr << "Exception: " << e.what() << "\n";
 	 }
-	printf("2-----\n");
+
         do_accept();
     }
 
