@@ -3,6 +3,7 @@
 #include <functional>
 #include <iostream>
 #include <optional>
+#include <list>
 #include <asio.hpp>
 #include <asio/ssl.hpp>
 #pragma warning(disable: 4996)
@@ -109,12 +110,25 @@ public:
         context_.use_private_key_file("server.pem", asio::ssl::context::pem);
         context_.use_tmp_dh_file("dh4096.pem");
 
-        auto endpoint = tcp::endpoint(tcp::v4(), port_);
-        acceptor_.open(endpoint.protocol());
-        acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-        acceptor_.bind(endpoint);
-        acceptor_.listen();
+	//        auto endpoint = tcp::endpoint(tcp::v4(), asio::ip::make_address("127.0.0.1"), port_);
 
+	auto endpoint = tcp::endpoint(asio::ip::make_address("127.0.0.1"), port_);
+	
+        acceptor_.open(endpoint.protocol());
+	int one = 1;
+	setsockopt(acceptor_.native_handle(), SOL_SOCKET, SO_REUSEPORT, &one, sizeof(one));
+
+	//acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+	try {
+	  acceptor_.bind(endpoint);
+	  printf("1.5-----\n");
+
+	  acceptor_.listen();
+	}
+	catch (std::exception& e) {
+	  std::cerr << "Exception: " << e.what() << "\n";
+	 }
+	printf("2-----\n");
         do_accept();
     }
 
@@ -125,16 +139,17 @@ public:
 
     void do_accept()
     {
-        acceptor_.async_accept([this](const std::error_code& error, tcp::socket socket) {
+
+      acceptor_.async_accept([this](const std::error_code& error, tcp::socket socket) {
             
         //acceptor_.async_accept(*socket, [&](std::error_code & error) {
-            if (!error) {
-                std::make_shared<session>(asio::ssl::stream<tcp::socket>(std::move(socket), context_), io_context_)->start();
-            }
+	if (!error) {
+	  std::make_shared<session>(asio::ssl::stream<tcp::socket>(std::move(socket), context_), io_context_)->start();
+	}
 
-            do_accept();
-            
-        });
+	do_accept();
+        
+      });
     }
 private:
     asio::io_context    &io_context_;
@@ -154,16 +169,18 @@ int main(int argc, char* argv[])
 
         auto count = std::thread::hardware_concurrency();
 
+	printf("cpu:%d\n", count);
+
         asio::io_context io;
 
         std::list<server> srv_list;
         std::vector<std::thread> threads;
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < count/2; i++) {
             srv_list.emplace_back(io, std::atoi(argv[1]));
             threads.emplace_back([&] {
-                printf("run id:%d\n", GetCurrentThreadId());
-                io.run();
-                printf("after run id:%d\n", GetCurrentThreadId());
+	      //printf("run id:%d\n", GetCurrentThreadId());
+	      io.run();
+	      //printf("after run id:%d\n", GetCurrentThreadId());
              });
         }
 
