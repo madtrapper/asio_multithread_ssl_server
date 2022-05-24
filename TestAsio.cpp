@@ -157,8 +157,12 @@ private:
     //std::optional<tcp::socket> socket;
 };
 
+extern void TestStrand();
+
 int main(int argc, char* argv[])
 {
+	TestStrand();
+	
     try {
         if (argc != 2) {
             std::cerr << "Usage: server <port>\n";
